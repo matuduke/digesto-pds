@@ -33,6 +33,14 @@ class File extends Model
     public const MIME_TYPE = 'mime_type';
     public const SIZE = 'size';
 
+    protected $fillable = [
+        self::DOCUMENT_ID,
+        self::NAME,
+        self::PATH,
+        self::MIME_TYPE,
+        self::SIZE,
+    ];
+
     public function document(): BelongsTo
     {
         return $this->belongsTo(Document::class);

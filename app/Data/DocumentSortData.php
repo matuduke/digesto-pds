@@ -2,7 +2,6 @@
 
 namespace App\Data;
 
-use App\Data\SortData;
 use App\Enums\SortDirection;
 use App\Models\Document;
 
@@ -13,15 +12,13 @@ class DocumentSortData extends SortData
 {
     /**
      * Constructor.
-     *
-     * @param string|null $sort
      */
     public function __construct(
         ?string $sort = null,
     ) {
         parent::__construct(
             $sort,
-            column: Document::PUBLISHED_AT,
+            column: Document::TABLE.'.'.Document::CREATED_AT,
             direction: SortDirection::DESC->value
         );
     }
