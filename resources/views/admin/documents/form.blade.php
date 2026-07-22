@@ -154,6 +154,11 @@ function formatFileSize(int $bytes, int $decimals = 2): string
           </div>
         </div>
 
+        <div class="form-group" style="float:left;">
+          <label for="publish_date">Fecha de Publicación</label>
+          <input type="date" id="publish_date" name="publish_date" value="{{ $document->publish_date ? $document->publish_date->format('Y-m-d') : '' }}" />
+        </div>
+
 
         <div class="form-group full">
           <label>Contenido <span class="required">*</span></label>

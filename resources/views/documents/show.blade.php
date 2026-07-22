@@ -9,6 +9,11 @@
 
   <div class="card">
 
+    <div class="form-group">
+        <label for="status">Fecha de norma: {{ $document->publish_date?->format('d/m/Y') }}</label>
+    </div>
+    <br/>
+
     <!-- Contenido del documento -->
     <div style="margin-bottom: 2rem;">
       <div class="content" style="text-align: justify; background: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 1.5rem; line-height: 1.7; color: rgba(255, 255, 255, 0.85);">

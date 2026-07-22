@@ -33,6 +33,7 @@
       <thead>
         <tr>
           <th>Número @if($sortColumn == 'number') <i class="bi bi-{{ $sortIconClass }}"> @endif</th>
+          <th>Fecha de norma @if($sortColumn == 'publish_date') <i class="bi bi-{{ $sortIconClass }}"> @endif</th>
           <th>Contenido @if($sortColumn == 'document_type_id') <i class="bi bi-{{ $sortIconClass }}"> @endif</th>
         </tr>
       </thead>
@@ -41,9 +42,11 @@
             <tr>
                 @if ($documentType->name == 'normativa-externa')
                 <td><a href="{{ $document->content }}" target="_blank">{{ $document->number }}</a></td>
+                <td>N/A</td>
                 <td><a href="{{ $document->content }}" target="_blank">{{ $document->content }}</a></td>
                 @else
                 <td><a href="{{ route('documents.show', ['document' => $document->id]) }}">{{ $document->number }}</a></td>
+                <td><a href="{{ route('documents.show', ['document' => $document->id]) }}" target="_blank">{{ $document->publish_date?->format('d/m/Y') }}</a></td>
                 <td>{{ substr(strip_tags($document->content), 0, 100) }}...</td>
                 @endif
             </tr>
@@ -111,7 +114,7 @@
         });
 
         $("#sortDate").click(function() {
-            sort("created_at");
+            sort("publish_date");
             search();
         });
     });

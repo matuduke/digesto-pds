@@ -48,6 +48,9 @@ class CreateDocumentData extends Data
         #[RequiredUnless('status', 'borrador')]
         public ?bool $isPublic,
 
+        #[Property(property: 'publish_date', description: 'Document publish date')]
+        public ?string $publishDate,
+
         #[Property(property: 'content', description: 'Document content')]
         #[RequiredUnless('status', 'borrador')]
         public ?string $content,

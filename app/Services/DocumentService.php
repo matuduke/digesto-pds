@@ -41,7 +41,7 @@ class DocumentService
                 return $query->where(Document::TABLE.'.'.Document::STATUS, $data->status);
             })
             ->join(DocumentType::TABLE, DocumentType::TABLE.'.'.DocumentType::ID, '=', Document::DOCUMENT_TYPE_ID)
-            ->orderBy($this->mapSortColumn($sortData->getColumn()), $sortData->getDirection());
+            ->orderBy(Document::TABLE.'.'.Document::PUBLISH_DATE, 'desc');
 
         // Admin users doesn't have restrictions
         if ($user) {
@@ -67,6 +67,8 @@ class DocumentService
             return DocumentType::TABLE.'.'.DocumentType::DESCRIPTION;
         } elseif ($column == 'created_at') {
             return Document::TABLE.'.'.Document::CREATED_AT;
+        } elseif ($column == 'publish_date') {
+            return Document::TABLE.'.'.Document::PUBLISH_DATE;
         } else {
             return $column;
         }

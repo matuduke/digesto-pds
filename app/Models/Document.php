@@ -23,11 +23,12 @@ use Illuminate\Support\Facades\DB;
  * @property string $title
  * @property string $number
  * @property Carbon $created_at
+ * @property Carbon $publish_date
  * @property string $status
  * @property string $content
  */
 #[Fillable(
-    ['document_type_id', 'title', 'number', 'status', 'is_public', 'content']
+    ['document_type_id', 'title', 'number', 'status', 'is_public', 'content', 'publish_date']
 )]
 class Document extends Model
 {
@@ -54,12 +55,14 @@ class Document extends Model
 
     public const CREATED_AT = 'created_at';
 
+    public const PUBLISH_DATE = 'publish_date';
+
     public const UPDATED_AT = 'updated_at';
 
     protected function casts(): array
     {
         return [
-            // 'created_at' => 'date',
+            'publish_date' => 'date',
         ];
     }
 
