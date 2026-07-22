@@ -4,7 +4,11 @@
   @include('layouts.partials.head')
 </head>
 <body>
-  @include('layouts.partials.sidebar')
+  @if(request()->routeIs('admin.*'))
+    @include('layouts.partials.sidebar_admin')
+  @else
+    @include('layouts.partials.sidebar')
+  @endif
 
   <div class="main-content">
     @yield('content')

@@ -1,3 +1,10 @@
+@php
+    use App\Models\DocumentType;
+
+    $documentTypes = DocumentType::query()
+            ->orderBy(DocumentType::DESCRIPTION)
+            ->get();
+@endphp
 <aside class="sidebar" id="sidebar">
   <img src="https://puertodocksud.com/wp-content/uploads/2025/01/Consorcio_Logo_BarraSuperior.png" alt="Logo Consorcio" style="width: 200px; padding: 1rem 0.75rem;"/>
   <div class="sidebar-header">
@@ -7,18 +14,13 @@
     </button>
   </div>
   <ul class="sidebar-nav">
+    @foreach ($documentTypes as $documentType)
     <li>
-      <a href="{{ route('documents.index') }}" class="@if(request()->routeIs('documents.*')) active @endif" data-label="Documentos">
+      <a href="{{ route('documents.byType', ['documentType' => $documentType->name]) }}" class="{{ request()->routeIs('documents.byType') && request()->route('documentType') === $documentType->name ? 'active' : '' }}" data-label="Normativas">
         <i class="bi bi-file-earmark-text"></i>
-        <span class="nav-label">Documentos</span>
+        <span class="nav-label">{{ $documentType->description }}</span>
       </a>
     </li>
-    <li class="nav-divider"></li>
-    <li>
-      <a href="#" data-label="Configuración">
-        <i class="bi bi-gear"></i>
-        <span class="nav-label">Configuración</span>
-      </a>
-    </li>
+    @endforeach
   </ul>
 </aside>

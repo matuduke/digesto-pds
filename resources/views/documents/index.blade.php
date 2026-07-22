@@ -9,14 +9,14 @@
         $sortIconClass = $sortDirection == '-' ? 'sort-alpha-down-alt' : 'sort-alpha-up';
     @endphp
   <header class="page-header">
-    <h1>Normativas</h1>
-    <p>Gestión de normativas del sistema</p>
+    <h1>{{ $documentType->description }}</h1>
+    <p>Listado de {{ $documentType->description }}</p>
   </header>
 
   <div class="card">
     <div class="listing-toolbar" style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem;">
 
-        <form name="search" method="post" action="{{ route('documents.search') }}" style="display: flex; gap: 1rem; align-items: center;" autocomplete="off">
+        <form name="search" method="post" action="{{ route('documents.search', ['documentType' => $documentType->name]) }}" style="display: flex; gap: 1rem; align-items: center;" autocomplete="off">
             <input type="hidden" name="sort" id="sort" value="{{ $filters['sort'] }}" />
             <div class="form-group search-bar" style="margin-bottom: 0; max-width: 360px;">
                 <div style="display: flex;">
@@ -26,81 +26,29 @@
                     </button>
                 </div>
             </div>
-
-            <div class="form-group" style="min-width: 200px;">
-                <select id="document_type_id" name="document_type_id">
-                    <option value="" style="color: rgba(255, 255, 255, 0.35);">- Tipo de norma -</option>
-                    @foreach ($documentTypes as $id => $description)
-                        <option value="{{ $id }}" @selected($filters['document_type_id'] == $id)>
-                            {{ $description }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="form-group" style="min-width: 200px;">
-            <select id="status" name="status">
-                <option value="" style="color: rgba(255, 255, 255, 0.35);">- Estado -</option>
-                @foreach ($statuses as $id => $name)
-                    <option value="{{ $id }}" @selected($filters['status'] == $id)>
-                        {{ $name }}
-                    </option>
-                @endforeach
-            </select>
-            </div>
         </form>
-    </div>
-
-    <div class="listing-toolbar" style="gap: 1rem; margin-bottom: 1.5rem;">
-      <a href="{{ route('documents.create') }}" class="btn btn-primary" style="float: right;">
-        <i class="bi bi-file-earmark-plus"></i> Cargar norma
-      </a>
     </div>
 
     <table class="data-table" id="data-table">
       <thead>
         <tr>
-          <th><a href="#" id="sortNumber">Número @if($sortColumn == 'number') <i class="bi bi-{{ $sortIconClass }}"> @endif</a></th>
-          <th><a href="#" id="sortTitle">Título @if($sortColumn == 'title') <i class="bi bi-{{ $sortIconClass }}"> @endif</a></th>
-          <th><a href="#" id="sortType">Tipo @if($sortColumn == 'document_type_id') <i class="bi bi-{{ $sortIconClass }}"> @endif</a></th>
-          <th><a href="#" id="sortStatus">Estado @if($sortColumn == 'status') <i class="bi bi-{{ $sortIconClass }}"> @endif</a></th>
-          <th><a href="#" id="sortDate">Fecha @if($sortColumn == 'published_at') <i class="bi bi-{{ $sortIconClass }}"> @endif</a></th>
-          <th style="text-align: center;">Acciones</th>
+          <th>Número @if($sortColumn == 'number') <i class="bi bi-{{ $sortIconClass }}"> @endif</th>
+          <th>Fecha de norma @if($sortColumn == 'publish_date') <i class="bi bi-{{ $sortIconClass }}"> @endif</th>
+          <th>Contenido @if($sortColumn == 'document_type_id') <i class="bi bi-{{ $sortIconClass }}"> @endif</th>
         </tr>
       </thead>
       <tbody id="table-body">
         @foreach ($documents as $document)
             <tr>
-                <td>{{ $document->number }}</td>
-                <td>
-                    @if(strlen($document->title) > 50)
-                    <span title="{{ $document->title }}">{{ substr($document->title, 0, 50) }}...</span>
-                    @else
-                    {{ $document->title }}
-                    @endif
-                </td>
-                <td>{{ $document->documentType->description }}</td>
-                <td>
-                    <span class="status-pill {{ $document->status }}">{{ ucwords($document->status) }}</span>
-                </td>
-                <td>
-                    @if ($document->published_at != null)
-                        {{ $document->published_at->format('d/m/Y') }}
-                    @else
-                        -
-                    @endif
-                </td>
-                <td style="text-align: center;">
-                    <a href="/documents/{{ $document->id }}" class="action-btn" style="color: #57cc99; text-decoration: none; cursor: pointer;" title="Ver">
-                    <i class="bi bi-eye"></i>
-                    </a>
-                    <a href="/documents/{{ $document->id }}/edit" class="action-btn" style="color: #57cc99; text-decoration: none; cursor: pointer; margin: 0 0.5rem;" title="Editar">
-                    <i class="bi bi-pencil"></i>
-                    </a>
-                    <button class="action-btn" style="background: none; border: none; color: #ff6b6b; cursor: pointer;" title="Eliminar">
-                    <i class="bi bi-trash"></i>
-                    </button>
-                </td>
+                @if ($documentType->name == 'normativa-externa')
+                <td><a href="{{ $document->content }}" target="_blank">{{ $document->number }}</a></td>
+                <td>N/A</td>
+                <td><a href="{{ $document->content }}" target="_blank">{{ $document->content }}</a></td>
+                @else
+                <td><a href="{{ route('documents.show', ['document' => $document->id]) }}">{{ $document->number }}</a></td>
+                <td><a href="{{ route('documents.show', ['document' => $document->id]) }}" target="_blank">{{ $document->publish_date?->format('d/m/Y') }}</a></td>
+                <td>{{ substr(strip_tags($document->content), 0, 100) }}...</td>
+                @endif
             </tr>
         @endforeach
       </tbody>
@@ -125,13 +73,11 @@
         var pageNumber = "1";
         var sort = $("#sort").val();
         var keyword = $("#keyword").val();
-        var documentTypeId = $("#document_type_id").val();
-        var status = $("#status").val();
 
-        window.location.href = url + createQueryString(pageNumber, sort, keyword, documentTypeId, status);
+        window.location.href = url + createQueryString(pageNumber, sort, keyword);
     }
 
-    function createQueryString(pageNumber, sort, keyword, documentTypeId, status) {
+    function createQueryString(pageNumber, sort, keyword) {
         var queryString = [];
         if (pageNumber != "") {
             queryString.push("page=" + pageNumber);
@@ -143,14 +89,6 @@
 
         if (keyword != "") {
             queryString.push("keyword=" + keyword);
-        }
-
-        if (documentTypeId != "") {
-            queryString.push("document_type_id=" + documentTypeId);
-        }
-
-        if (status != "") {
-            queryString.push("status=" + status);
         }
 
         return "?" + queryString.join("&");
@@ -170,36 +108,13 @@
             search();
         });
 
-        $("select#document_type_id").change(function() {
-            search();
-        });
-
-        $("select#status").change(function() {
-            search();
-        });
-
         $("#sortNumber").click(function() {
             sort("number");
             search();
         });
 
-        $("#sortTitle").click(function() {
-            sort("title");
-            search();
-        });
-
-        $("#sortType").click(function() {
-            sort("document_type_id");
-            search();
-        });
-
-        $("#sortStatus").click(function() {
-            sort("status");
-            search();
-        });
-
         $("#sortDate").click(function() {
-            sort("published_at");
+            sort("publish_date");
             search();
         });
     });

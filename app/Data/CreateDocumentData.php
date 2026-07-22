@@ -18,11 +18,11 @@ use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 
 #[RequestBody(
-    request: "CreateDocumentData",
+    request: 'CreateDocumentData',
     required: true,
-    content: new JsonContent(ref: "#/components/schemas/CreateDocumentData"),
+    content: new JsonContent(ref: '#/components/schemas/CreateDocumentData'),
 )]
-#[Schema(title: "Create document Data")]
+#[Schema(title: 'Create document Data')]
 #[MapName(SnakeCaseMapper::class)]
 class CreateDocumentData extends Data
 {
@@ -44,14 +44,24 @@ class CreateDocumentData extends Data
         #[RequiredUnless('status', 'borrador')]
         public ?string $number,
 
+        #[Property(property: 'is_public', description: 'Determines if the document is of public access')]
+        #[RequiredUnless('status', 'borrador')]
+        public ?bool $isPublic,
+
+        #[Property(property: 'publish_date', description: 'Document publish date')]
+        public ?string $publishDate,
+
         #[Property(property: 'content', description: 'Document content')]
         #[RequiredUnless('status', 'borrador')]
         public ?string $content,
 
         #[Property(property: 'authorized_user_ids', description: 'Authorized users')]
-        public ?string $auuthorizedUserIds,
+        public ?string $authorizedUserIds,
 
         #[Property(property: 'authorized_group_ids', description: 'Authorized groups')]
-        public ?string $auuthorizedGroupIds,
-    ) { }
+        public ?string $authorizedGroupIds,
+
+        #[Property(property: 'files', description: 'Attached files')]
+        public ?array $files,
+    ) {}
 }

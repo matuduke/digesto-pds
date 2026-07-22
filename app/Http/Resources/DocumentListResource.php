@@ -13,9 +13,8 @@ use OpenApi\Attributes\Schema;
         new Property(property: Document::ID, type: 'integer', example: 8),
         new Property(property: Document::DOCUMENT_TYPE_ID, type: 'integer', example: 2),
         new Property(property: Document::USER_ID, type: 'integer', example: 4),
-        new Property(property: Document::TITLE, type: 'string', example: 'Normativa Portuaria 2026'),
         new Property(property: Document::NUMBER, type: 'string', example: 'DOC-2026-001'),
-        new Property(property: Document::PUBLISHED_AT, type: 'string', format: 'date', example: '2026-06-20'),
+        new Property(property: Document::CREATED_AT, type: 'string', format: 'date', example: '2026-06-20'),
         new Property(property: Document::STATUS, type: 'string', example: 'borrador'),
     ]
 )]
@@ -33,9 +32,8 @@ class DocumentListResource extends GenericResource
     {
         return [
             Document::ID => $this->resource->id,
-            Document::TITLE => $this->resource->title,
             Document::NUMBER => $this->resource->number,
-            Document::PUBLISHED_AT => $this->resource->published_at,
+            Document::CREATED_AT => $this->resource->created_at,
             Document::STATUS => $this->resource->status,
             'user' => $this->resource->user,
             'document_type' => $this->resource->documentType,

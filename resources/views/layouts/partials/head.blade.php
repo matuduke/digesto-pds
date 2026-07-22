@@ -433,6 +433,15 @@
     padding: 1rem;
   }
 
+  table.data-table tr td a {
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+  }
+
+  table.data-table tr td a:hover {
+    text-decoration: underline;
+  }
+
   table.data-table tr td button.action-btn {
     background: none;
     border: none;
@@ -543,6 +552,25 @@
 
   div.alert.alert-warning strong::before {
     content: "⚠️";
+  }
+
+  div.alert.alert-info {
+    background-color: #d0eaf8;
+    border: 1px solid #2196f3;
+  }
+
+  div.alert.alert-info p {
+    margin: 0;
+    color: #0c507a;
+  }
+
+  div.alert.alert-info ul li {
+    margin: 0;
+    color: #0c507a;
+  }
+
+  div.alert.alert-info strong::before {
+    content: "ℹ️";
   }
 
   .rich-editor-wrapper {

@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property Carbon|null $deleted_at
  */
 #[Fillable(
-    ['name', 'description']
+    ['description']
 )]
 class Group extends Model
 {

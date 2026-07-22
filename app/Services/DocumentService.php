@@ -16,37 +16,40 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
 class DocumentService
 {
-    public function __construct() { }
+    public function __construct() {}
 
-
-    public function list(GetDocumentsData $data, DocumentSortData $sortData, User $user): LengthAwarePaginator
+    public function list(GetDocumentsData $data, DocumentSortData $sortData, ?User $user = null): LengthAwarePaginator
     {
         $documents = Document::query()
-            ->select(DB::raw('distinct ' . Document::TABLE . '.*, '. DocumentType::TABLE .'.*'))
+            ->select(DB::raw($this->getSelectFields()))
             ->when($data->keyword, function ($query) use ($data) {
-                return $query->where(Document::TABLE . '.' . Document::TITLE, 'like', '%' . $data->keyword . '%')
-                    ->orWhere(Document::TABLE . '.' . Document::NUMBER, 'like', '%' . $data->keyword . '%')
-                    ->orWhere(Document::TABLE . '.' . Document::CONTENT, 'like', '%' . $data->keyword . '%');
+                return $query->where(function($query) use ($data) {
+                    $query->where(Document::TABLE.'.'.Document::NUMBER, 'like', '%'.$data->keyword.'%')
+                        ->orWhere(Document::TABLE.'.'.Document::CONTENT, 'like', '%'.$data->keyword.'%');
+                });
             })
             ->when($data->documentTypeId, function ($query) use ($data) {
-                return $query->where(Document::TABLE . '.' . Document::DOCUMENT_TYPE_ID, $data->documentTypeId);
+                return $query->where(Document::TABLE.'.'.Document::DOCUMENT_TYPE_ID, $data->documentTypeId);
             })
             ->when($data->dateFrom, function ($query) use ($data) {
-                return $query->where(Document::TABLE . '.' . Document::PUBLISHED_AT, '>=', $data->dateFrom);
+                return $query->where(Document::TABLE.'.'.Document::CREATED_AT, '>=', $data->dateFrom);
             })
             ->when($data->dateTo, function ($query) use ($data) {
-                return $query->where(Document::TABLE . '.' . Document::PUBLISHED_AT, '<=', $data->dateTo);
+                return $query->where(Document::TABLE.'.'.Document::CREATED_AT, '<=', $data->dateTo);
             })
             ->when($data->status, function ($query) use ($data) {
-                return $query->where(Document::TABLE . '.' . Document::STATUS, $data->status);
+                return $query->where(Document::TABLE.'.'.Document::STATUS, $data->status);
             })
-            ->join(DocumentType::TABLE, DocumentType::TABLE . '.' . DocumentType::ID, '=', Document::DOCUMENT_TYPE_ID)
-            ->with(['user', 'documentType'])
-            ->orderBy($this->mapSortColumn($sortData->getColumn()), $sortData->getDirection());
+            ->join(DocumentType::TABLE, DocumentType::TABLE.'.'.DocumentType::ID, '=', Document::DOCUMENT_TYPE_ID)
+            ->orderBy(Document::TABLE.'.'.Document::PUBLISH_DATE, 'desc');
 
         // Admin users doesn't have restrictions
-        if (!$user->isAdmin()) {
-            $documents = $documents->documentsICanView($user);
+        if ($user) {
+            if(!$user->isAdmin()) {
+                $documents = $documents->documentsICanView($user);
+            }
+        } else {
+            $documents->where(Document::IS_PUBLIC, true);
         }
 
         DB::listen(function ($documents) {
@@ -58,22 +61,30 @@ class DocumentService
             ->withQueryString();
     }
 
-    private function mapSortColumn(string $column): string {
+    private function mapSortColumn(string $column): string
+    {
         if ($column == 'document_type_id') {
-            return DocumentType::TABLE . '.' . DocumentType::DESCRIPTION;
+            return DocumentType::TABLE.'.'.DocumentType::DESCRIPTION;
+        } elseif ($column == 'created_at') {
+            return Document::TABLE.'.'.Document::CREATED_AT;
+        } elseif ($column == 'publish_date') {
+            return Document::TABLE.'.'.Document::PUBLISH_DATE;
         } else {
             return $column;
         }
     }
 
+    private function getSelectFields(): string
+    {
+        return 'distinct '.Document::TABLE.'.' . Document::ID . ', '.Document::TABLE.'.*, '.
+            DocumentType::TABLE.'.'.DocumentType::NAME.','.
+            DocumentType::TABLE.'.'.DocumentType::DESCRIPTION;
+    }
+
     /**
      * Return the requested document or null if not found or the user is not allowed
      *
-     * @param int $documentId
-     * @param User $user
      * @throws AccessDeniedHttpException
-     *
-     * @return Document
      */
     public function get(int $documentId, User $user): Document
     {
@@ -81,6 +92,7 @@ class DocumentService
             $document = Document::find($documentId);
             if ($document) {
                 $document->load(['documentType', 'user', 'files', 'authorizedUsers', 'authorizedGroups']);
+
                 return $document;
             } else {
                 throw new UnprocessableEntityHttpException('La norma que desea ver no existe');
@@ -96,10 +108,10 @@ class DocumentService
 
         if ($document) {
             // Authorize users and groups
-            $authorizedUsers = explode(',', $documentData->auuthorizedUserIds);
+            $authorizedUsers = explode(',', $documentData->authorizedUserIds);
             $document->authorizedUsers()->sync($authorizedUsers);
 
-            $authorizedGroups = explode(',', $documentData->auuthorizedGroupIds);
+            $authorizedGroups = explode(',', $documentData->authorizedGroupIds);
             $document->authorizedGroups()->sync($authorizedGroups);
         }
 
@@ -110,10 +122,10 @@ class DocumentService
     {
         if ($document) {
             // Authorize users and groups
-            $authorizedUsers = explode(',', $documentData->auuthorizedUserIds);
+            $authorizedUsers = explode(',', $documentData->authorizedUserIds);
             $document->authorizedUsers()->sync($authorizedUsers);
 
-            $authorizedGroups = explode(',', $documentData->auuthorizedGroupIds);
+            $authorizedGroups = explode(',', $documentData->authorizedGroupIds);
             $document->authorizedGroups()->sync($authorizedGroups);
         }
 
@@ -127,12 +139,12 @@ class DocumentService
 
     public function userHasAccess(int $documentId, User $user): bool
     {
-        if (!$user->isAdmin()) {
-            $document = Document::where(Document::TABLE . '.' . Document::ID, $documentId)
+        if (! $user->isAdmin()) {
+            $document = Document::where(Document::TABLE.'.'.Document::ID, $documentId)
                 ->documentsICanView($user)
                 ->first();
 
-            return (isset($document));
+            return isset($document);
         } else {
             return true;
         }

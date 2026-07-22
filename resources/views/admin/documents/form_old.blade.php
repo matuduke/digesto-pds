@@ -76,15 +76,6 @@
           @enderror
         </div>
 
-        <!-- Fecha de Publicación -->
-        <div class="form-group">
-          <label>Fecha de Publicación</label>
-          <input type="date" name="published_at" value="{{ $document->published_at?->format('Y-m-d') ?? old('published_at') }}" />
-          @error('published_at')
-            <span style="color: #ff6b6b; font-size: 0.8rem;">{{ $message }}</span>
-          @enderror
-        </div>
-
         <!-- Estado -->
         <div class="form-group">
           <label>Estado <span class="required">*</span></label>
