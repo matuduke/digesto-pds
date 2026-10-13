@@ -3,13 +3,59 @@
 namespace Tests\Feature;
 
 use App\Models\Document;
+use App\Models\ChangeLog;
 use App\Models\DocumentType;
 use App\Models\File;
 use App\Models\User;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class AdminDocumentControllerTest extends TestCase
 {
+    public function test_document_history_displays_all_logs_and_escapes_changes(): void
+    {
+        $user = User::factory()->make(['name' => 'Usuario de prueba']);
+        $firstLog = new ChangeLog([
+            'changes' => '<script>alert(1)</script>',
+        ]);
+        $firstLog->created_at = '2026-10-09 14:30:00';
+        $firstLog->setRelation('user', $user);
+        $secondLog = new ChangeLog(['changes' => 'Segundo cambio']);
+        $secondLog->created_at = '2026-10-09 15:00:00';
+        $secondLog->setRelation('user', null);
+        $document = new Document;
+        $document->setRelation('logs', collect([$firstLog, $secondLog]));
+        $template = Str::between(
+            file_get_contents(resource_path('views/admin/documents/form.blade.php')),
+            '<table class="data-table" id="document-logs">',
+            '</table>'
+        );
+
+        $this->blade($template, ['document' => $document])
+            ->assertSee('Usuario de prueba')
+            ->assertSee('<script>alert(1)</script>')
+            ->assertDontSee('<script>alert(1)</script>', false)
+            ->assertSee('09/10/2026 14:30:00')
+            ->assertSee('Segundo cambio')
+            ->assertSee('09/10/2026 15:00:00')
+            ->assertSee('<td>-</td>', false);
+    }
+
+    public function test_document_history_displays_an_empty_state(): void
+    {
+        $document = new Document;
+        $document->setRelation('logs', collect());
+        $template = Str::between(
+            file_get_contents(resource_path('views/admin/documents/form.blade.php')),
+            '<table class="data-table" id="document-logs">',
+            '</table>'
+        );
+
+        $this->blade($template, ['document' => $document])
+            ->assertSee('No hay cambios registrados.')
+            ->assertSee('colspan="3"', false);
+    }
+
     /**
      * Test file upload with normalized file name
      */

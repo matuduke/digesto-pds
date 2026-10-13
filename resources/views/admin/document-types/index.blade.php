@@ -18,7 +18,6 @@
     <table class="data-table" id="data-table">
       <thead>
         <tr>
-          <th><a href="#">Nombre</a></th>
           <th><a href="#">Descripción</a></th>
           <th style="text-align: center;">Acciones</th>
         </tr>
@@ -26,7 +25,6 @@
       <tbody>
         @forelse ($documentTypes as $documentType)
           <tr>
-            <td>{{ $documentType->name }}</td>
             <td>{{ $documentType->description }}</td>
             <td style="text-align: center;">
               <a href="{{ route('admin.document-types.edit', $documentType->id) }}" class="action-btn" style="color: #57cc99; text-decoration: none; cursor: pointer; margin: 0 0.5rem;" title="Editar">

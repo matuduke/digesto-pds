@@ -48,10 +48,30 @@ class User extends Authenticatable
 
     public function isAdmin()
     {
-        $adminGroup = $this->groups->where('name', 'administradores')
+        $adminGroup = $this->groups->where('name', Group::ADMINISTRATORS_GROUP)
             ->first();
 
         if ($adminGroup) {
+            return true;
+        }
+    }
+
+    public function isCreator()
+    {
+        $creatorGroup = $this->groups->where('name', Group::DOCUMENT_CREATORS_GROUP)
+            ->first();
+
+        if ($creatorGroup) {
+            return true;
+        }
+    }
+
+    public function isApprover()
+    {
+        $approverGroup = $this->groups->where('name', Group::DOCUMENT_APPROVERS_GROUP)
+            ->first();
+
+        if ($approverGroup) {
             return true;
         }
     }

@@ -91,6 +91,11 @@ class Document extends Model
         return $this->belongsToMany(Group::class, 'authorized_groups', 'document_id', 'group_id');
     }
 
+    public function logs(): HasMany
+    {
+        return $this->hasMany(ChangeLog::class, 'document_id')->orderBy('created_at', 'desc');
+    }
+
     public function scopeDocumentsICanView(Builder $builder, User $user)
     {
         return

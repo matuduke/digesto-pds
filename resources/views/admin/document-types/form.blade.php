@@ -28,14 +28,6 @@
 
       <div class="form-grid">
         <div class="form-group">
-          <label for="name">Nombre <span class="required">*</span></label>
-          <input type="text" id="name" name="name" placeholder="Ej: Decreto" maxlength="255" required value="{{ old('name', $documentType->name) }}" />
-          @error('name')
-            <span class="validation-error">{{ $message }}</span>
-          @enderror
-        </div>
-
-        <div class="form-group">
           <label for="description">Descripción <span class="required">*</span></label>
           <input type="text" id="description" name="description" placeholder="Ej: Documento de tipo decreto municipal" maxlength="255" required value="{{ old('description', $documentType->description) }}" />
           @error('description')

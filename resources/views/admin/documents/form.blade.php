@@ -1,17 +1,3 @@
-@php
-function formatFileSize(int $bytes, int $decimals = 2): string
-{
-    $units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-    $factor = 0;
-
-    while ($bytes >= 1024 && $factor < count($units) - 1) {
-        $bytes /= 1024;
-        $factor++;
-    }
-
-    return round($bytes, $decimals) . ' ' . $units[$factor];
-}
-@endphp
 @extends('layouts.app')
 
 @section('title', $document->id ? 'Editar normativa' : 'Nueva normativa')
@@ -100,9 +86,9 @@ function formatFileSize(int $bytes, int $decimals = 2): string
         </div>
     @endif
 
-    @if ($message != null && $message != '')
+    @if (session('message'))
         <div class="alert alert-info">
-            <p><strong></strong>{{ $message }}</p>
+            <p><strong></strong>{{ session('message') }}</p>
         </div>
     @endif
 
@@ -110,6 +96,7 @@ function formatFileSize(int $bytes, int $decimals = 2): string
     <p class="card-section-title">Datos de la normativa</p>
 
     <form method="POST" action="{{ route('admin.documents.save') }}" novalidate autocomplete="off" enctype="multipart/form-data">
+        @csrf
         <input type="hidden" name="id" value="{{ $document->id }}" />
       <div class="form-grid">
 
@@ -127,22 +114,16 @@ function formatFileSize(int $bytes, int $decimals = 2): string
 
         <div class="form-group" style="float:right; margin-right: 30px;">
           <label for="number">Número <span class="required">*</span></label>
-          <input type="text" id="number" name="number" placeholder="Ej: 12/2025" maxlength="50" required value="{{ $document->number }}"/>
+          <input type="text" id="number" name="number" placeholder="Ej: 12/2025" maxlength="50" required value="{{ $document->number ?? old('number') }}"/>
         </div>
 
         <div class="form-group" style="float:left;">
-          <label for="status">Estado <span class="required">*</span></label>
-          <select id="status" name="status" required>
-            @foreach ($statuses as $id => $description)
-                <option value="{{ $id }}" @selected($document->status == $id)>
-                    {{ $description }}
-                </option>
-            @endforeach
-          </select>
+          <label for="publish_date">Fecha de Publicación</label>
+          <input type="date" id="publish_date" name="publish_date" value="{{ $document->publish_date ? $document->publish_date->format('Y-m-d') : '' }}" />
         </div>
 
-        <div class="form-group" style="float:left;">
-          <label for="is_public">¿La normativa es de acceso público? <span class="required">*</span></label>
+        <div class="form-group" style="float:left; margin-left: 30px;">
+          <label for="is_public">¿La normativa es de acceso público?</label>
           @php($isPublic = (int) old('is_public', $document->is_public ?? 0) === 1)
           <div class="boolean-switch-row">
             <input type="hidden" name="is_public" value="0" />
@@ -152,11 +133,6 @@ function formatFileSize(int $bytes, int $decimals = 2): string
             </label>
             <span class="boolean-switch-label" id="is_public_label" aria-live="polite">{{ $isPublic ? 'Sí' : 'No' }}</span>
           </div>
-        </div>
-
-        <div class="form-group" style="float:left;">
-          <label for="publish_date">Fecha de Publicación</label>
-          <input type="date" id="publish_date" name="publish_date" value="{{ $document->publish_date ? $document->publish_date->format('Y-m-d') : '' }}" />
         </div>
 
 
@@ -180,7 +156,7 @@ function formatFileSize(int $bytes, int $decimals = 2): string
           <input type="hidden" id="content" name="content" />
         </div>
 
-        <div class="form-group full">
+                <div class="form-group full reading-authorization-section">
           <label>Personas autorizadas para la lectura</label>
           <div class="tag-input-wrapper" id="user-wrapper">
             <input
@@ -198,7 +174,7 @@ function formatFileSize(int $bytes, int $decimals = 2): string
 
         </div>
 
-        <div class="form-group full">
+                <div class="form-group full reading-authorization-section">
           <label>Grupos autorizados para la lectura</label>
           <div class="tag-input-wrapper" id="group-wrapper">
             <input
@@ -227,11 +203,50 @@ function formatFileSize(int $bytes, int $decimals = 2): string
           <div class="file-list" id="file-list"></div>
         </div>
 
-      </div>
+        <div class="form-group full">
+            <p class="card-section-title">Historial de cambios</p>
+            <div style="overflow-x: auto; overflow-y: auto; height: 300px;">
+                <table class="data-table" id="document-logs">
+                    <thead>
+                        <tr>
+                            <th scope="col">Usuario</th>
+                            <th scope="col">Cambios</th>
+                            <th scope="col">Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($document->logs as $log)
+                            <tr>
+                                <td>{{ $log->user?->name ?? '-' }}</td>
+                                <td style="white-space: pre-wrap; overflow-wrap: anywhere;">{{ $log->getParsedChanges() }}</td>
+                                <td>{{ $log->created_at?->format('d/m/Y H:i:s') ?? '-' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3">No hay cambios registrados.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-      <div class="form-actions">
-        <button type="button" class="btn btn-secondary" onclick="location.href='/admin/documentos'">Cancelar</button>
-        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        <div class="form-actions" style="">
+            <button type="button" class="btn btn-secondary" onclick="location.href='/admin/documentos'; return false;">Cancelar</button>
+            @if($user->isCreator())
+            <button type="submit" class="btn btn-primary">Guardar cambios</button>
+            @endif
+            @if($user->isApprover())
+                @if($document->status == 'borrador')
+                <button type="button" class="btn btn-white" onclick="location.href='/admin/documentos/{{ $document->id }}/publicar'; return false;" style="float: right;">Publicar</button>
+                @endif
+
+                @if($document->status == 'publicado')
+                <button type="button" class="btn btn-white" onclick="location.href='/admin/documentos/{{ $document->id }}/borrador'; return false;" style="float: right;">Pasar a borrador</button>
+                @endif
+            @endif
+        </div>
+
       </div>
 
     </form>
@@ -267,6 +282,10 @@ function formatFileSize(int $bytes, int $decimals = 2): string
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
+    }
+
+    function publicar() {
+
     }
 
     function updateSearchItemHighlight() {
@@ -563,9 +582,6 @@ function formatFileSize(int $bytes, int $decimals = 2): string
             if (uniqueNewFiles.length > 0) {
                 addFilesToSelection(uniqueNewFiles);
             }
-
-            // Clear the input so next file selection is detected as a change
-            $fileInput.val('');
         });
 
         // Handle file removal for both new and existing files
@@ -598,7 +614,9 @@ function formatFileSize(int $bytes, int $decimals = 2): string
         var $isPublicLabel = $('#is_public_label');
 
         function updateIsPublicLabel() {
-            $isPublicLabel.text($isPublic.is(':checked') ? 'Sí' : 'No');
+            var isPublic = $isPublic.is(':checked');
+            $isPublicLabel.text(isPublic ? 'Sí' : 'No');
+            $('.reading-authorization-section').toggle(!isPublic);
         }
 
         $isPublic.on('change', updateIsPublicLabel);
@@ -613,6 +631,13 @@ function formatFileSize(int $bytes, int $decimals = 2): string
 
             document.execCommand(command, false, null);
             $("#rich-editor").trigger('focus');
+        });
+
+        $("#rich-editor").on('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                document.execCommand('insertLineBreak', false, null);
+            }
         });
 
         $("#rich-editor").on('keyup mouseup input', function () {

@@ -46,7 +46,7 @@
                 $fileIcon = 'img.png';
               }
             @endphp
-            <a href="/{{ $file->path ?? '#' }}" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.7rem 0.9rem; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 6px; color: #57cc99; text-decoration: none; transition: background 0.2s;">
+            <a href="{{ route('documents.file', ['document' => $document->id, 'file' => $file->id]) }}" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.7rem 0.9rem; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 6px; color: #57cc99; text-decoration: none; transition: background 0.2s;">
               <img src="/images/{{ $fileIcon }}" alt="File type icon" style="height: 80px;" />
               <span style="font-weight: bold;">{{ $file->name ?? 'Descargar archivo' }}</span>
             </a>
@@ -54,6 +54,34 @@
         </div>
       </div>
     @endif
+
+    <div class="form-group full">
+        <p class="card-section-title">Historial de cambios</p>
+        <div style="overflow-x: auto; overflow-y: auto; height: 300px;">
+            <table class="data-table" id="document-logs">
+                <thead>
+                    <tr>
+                        <th scope="col">Usuario</th>
+                        <th scope="col">Cambios</th>
+                        <th scope="col">Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($document->logs as $log)
+                        <tr>
+                            <td>{{ $log->user?->name ?? '-' }}</td>
+                            <td style="white-space: pre-wrap; overflow-wrap: anywhere;">{{ $log->getParsedChanges() }}</td>
+                            <td>{{ $log->created_at?->format('d/m/Y H:i:s') ?? '-' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="3">No hay cambios registrados.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 
     <!-- Acciones -->
     <div style="display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">

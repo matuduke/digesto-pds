@@ -21,11 +21,9 @@ class IsAdministrator
             return redirect()->route('login');
         }
 
-        $isAdministrator = $user->groups()
-            ->where(Group::NAME, 'administradores_del_sistema')
-            ->exists();
+        $hasAccess = $user->groups()->where(Group::NAME, Group::ADMINISTRATORS_GROUP)->exists();
 
-        if (! $isAdministrator) {
+        if (! $hasAccess) {
             Auth::guard('web')->logout();
             $request->session()->put('redirect_to', $redirectTo);
             $request->session()->regenerateToken();

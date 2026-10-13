@@ -8,6 +8,17 @@
     <p>Gestión de grupos de usuarios del sistema</p>
   </header>
 
+  @if ($errors->any())
+    <div class="alert alert-warning">
+      <p><strong>Se produjo un error</strong></p>
+      <ul>
+        @foreach ($errors->all() as $error)
+          <li>{!! $error !!}</li>
+        @endforeach
+      </ul>
+    </div>
+  @endif
+
   <div class="card">
     <div class="listing-toolbar" style="gap: 1rem; margin-bottom: 1.5rem;">
       <a href="{{ route('admin.groups.new') }}" class="btn btn-primary" style="float: right;">

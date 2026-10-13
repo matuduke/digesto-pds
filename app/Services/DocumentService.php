@@ -24,24 +24,27 @@ class DocumentService
             ->select(DB::raw($this->getSelectFields()))
             ->when($data->keyword, function ($query) use ($data) {
                 return $query->where(function($query) use ($data) {
-                    $query->where(Document::TABLE.'.'.Document::NUMBER, 'like', '%'.$data->keyword.'%')
-                        ->orWhere(Document::TABLE.'.'.Document::CONTENT, 'like', '%'.$data->keyword.'%');
+                    $query->orWhere(Document::TABLE.'.'.Document::CONTENT, 'like', '%'.$data->keyword.'%');
+                });
+            })
+            ->when($data->number, function ($query) use ($data) {
+                return $query->where(function($query) use ($data) {
+                    $query->where(Document::TABLE.'.'.Document::NUMBER, 'like', '%'.$data->number.'%');
                 });
             })
             ->when($data->documentTypeId, function ($query) use ($data) {
                 return $query->where(Document::TABLE.'.'.Document::DOCUMENT_TYPE_ID, $data->documentTypeId);
             })
             ->when($data->dateFrom, function ($query) use ($data) {
-                return $query->where(Document::TABLE.'.'.Document::CREATED_AT, '>=', $data->dateFrom);
+                return $query->where(Document::TABLE.'.'.Document::PUBLISH_DATE, '>=', $data->dateFrom);
             })
             ->when($data->dateTo, function ($query) use ($data) {
-                return $query->where(Document::TABLE.'.'.Document::CREATED_AT, '<=', $data->dateTo);
+                return $query->where(Document::TABLE.'.'.Document::PUBLISH_DATE, '<=', $data->dateTo);
             })
             ->when($data->status, function ($query) use ($data) {
                 return $query->where(Document::TABLE.'.'.Document::STATUS, $data->status);
             })
-            ->join(DocumentType::TABLE, DocumentType::TABLE.'.'.DocumentType::ID, '=', Document::DOCUMENT_TYPE_ID)
-            ->orderBy(Document::TABLE.'.'.Document::PUBLISH_DATE, 'desc');
+            ->join(DocumentType::TABLE, DocumentType::TABLE.'.'.DocumentType::ID, '=', Document::DOCUMENT_TYPE_ID);
 
         // Admin users doesn't have restrictions
         if ($user) {
@@ -57,6 +60,7 @@ class DocumentService
         });
 
         return $documents
+            ->orderBy($sortData->getColumn(), $sortData->getDirection())
             ->paginate($data->perPage)
             ->withQueryString();
     }

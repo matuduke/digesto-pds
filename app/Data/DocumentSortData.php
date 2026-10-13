@@ -18,7 +18,7 @@ class DocumentSortData extends SortData
     ) {
         parent::__construct(
             $sort,
-            column: Document::TABLE.'.'.Document::CREATED_AT,
+            column: Document::TABLE.'.'.Document::PUBLISH_DATE,
             direction: SortDirection::DESC->value
         );
     }

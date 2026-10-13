@@ -36,7 +36,6 @@ class AdminDocumentTypeController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string', 'max:255'],
         ]);
 
@@ -45,6 +44,7 @@ class AdminDocumentTypeController extends Controller
             : new DocumentType;
 
         $documentType->fill($validated);
+        $documentType->name = $this->normalizeName($request['description']);
         $documentType->save();
 
         return redirect()->route('admin.document-types.index');
@@ -62,5 +62,42 @@ class AdminDocumentTypeController extends Controller
         return view('admin.document-types.form', [
             'documentType' => $documentType,
         ]);
+    }
+
+    /**
+     * Normalize the name by removing diacritics, replacing spaces with underscores, and converting to lowercase
+     */
+    private function normalizeName(string $name): string
+    {
+        // Normalize: remove diacritics and convert special characters
+        $normalized = $this->removeDiacritics($name);
+
+        // Replace spaces with underscores
+        $normalized = str_replace(' ', '-', $normalized);
+
+        // Convert to lowercase
+        $normalized = strtolower($normalized);
+
+        return $normalized;
+    }
+
+    /**
+     * Remove diacritical marks from a string
+     */
+    private function removeDiacritics(string $str): string
+    {
+        // Use PHP's Normalizer to decompose accented characters
+        $str = normalizer_normalize($str, \Normalizer::FORM_D);
+
+        // Remove all combining diacritical marks
+        $str = preg_replace('/[\x{0300}-\x{036f}]/u', '', $str);
+
+        // Handle special cases
+        $replacements = [
+            'ñ' => 'n',
+            'Ñ' => 'n',
+        ];
+
+        return strtr($str, $replacements);
     }
 }

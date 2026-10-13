@@ -35,10 +35,6 @@ class CreateDocumentData extends Data
         #[Exists(DocumentType::class, 'id')]
         public int $documentTypeId,
 
-        #[Property(property: 'status', description: 'Document status')]
-        #[Enum(DocumentStatus::class)]
-        public string $status,
-
         #[Property(property: 'number', description: 'Document number')]
         #[Max(255)]
         #[RequiredUnless('status', 'borrador')]

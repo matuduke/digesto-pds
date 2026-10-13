@@ -29,7 +29,7 @@
       <div class="form-grid">
         <div class="form-group">
           <label for="name">Nombre <span class="required">*</span></label>
-          <input type="text" id="name" name="name" placeholder="Ej: Juan García" maxlength="255" required value="{{ old('name', $user->name) }}" />
+          <input type="text" id="name" name="name" placeholder="Ej: Juan García" maxlength="255" required value="{{ old('name', $user->name) }}" style="width: 550px;" />
           @error('name')
             <span class="validation-error">{{ $message }}</span>
           @enderror
@@ -37,7 +37,7 @@
 
         <div class="form-group">
           <label for="email">Email <span class="required">*</span></label>
-          <input type="email" id="email" name="email" placeholder="usuario@ejemplo.com" maxlength="255" required value="{{ old('email', $user->email) }}" />
+          <input type="email" id="email" name="email" placeholder="usuario@ejemplo.com" maxlength="255" required value="{{ old('email', $user->email) }}" style="width: 550px;" />
           @error('email')
             <span class="validation-error">{{ $message }}</span>
           @enderror

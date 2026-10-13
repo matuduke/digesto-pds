@@ -35,6 +35,10 @@ class Group extends Model
     public const NAME = 'name';
     public const DESCRIPTION = 'description';
 
+    public const ADMINISTRATORS_GROUP = 'administradores_del_sistema';
+    public const DOCUMENT_CREATORS_GROUP = 'creadores_de_reglamentaciones';
+    public const DOCUMENT_APPROVERS_GROUP = 'aprobadores_de_reglamentaciones';
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'group_users');

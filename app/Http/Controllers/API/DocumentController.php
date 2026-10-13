@@ -71,8 +71,7 @@ class DocumentController extends Controller
     )]
     public function index(GetDocumentsData $data, DocumentSortData $sortData): GenericResourceCollection
     {
-        //$user = Auth::user();
-        $user = User::find(1);
+        $user = Auth::user();
         $data->status = DocumentStatus::PUBLISHED->value;
         return GenericResourceCollection::make($this->documentService->list($data, $sortData, $user), DocumentListResource::class);
     }
@@ -99,9 +98,7 @@ class DocumentController extends Controller
     )]
     public function show(Document $document): JsonResponse
     {
-        //$user = Auth::user();
-        $user = User::find(1);
-
+        $user = Auth::user();
         if ($this->documentService->userHasAccess($document->id, $user)) {
             return response()->json($document);
         } else {
@@ -125,9 +122,7 @@ class DocumentController extends Controller
     )]
     public function store(CreateDocumentData $documentData): DocumentResource
     {
-        //$user = Auth::user();
-        $user = User::find(1);
-
+        $user = Auth::user();
         if ($user->isAdmin()) {
             $document = $this->documentService->store($documentData, $user);
             return new DocumentResource($document);
@@ -153,9 +148,7 @@ class DocumentController extends Controller
     )]
     public function update(CreateDocumentData $documentData, Document $document): DocumentResource
     {
-        //$user = Auth::user();
-        $user = User::find(1);
-
+        $user = Auth::user();
         if ($user->isAdmin()) {
             if ($this->documentService->update($document, $documentData)) {
                 return new DocumentResource($document);
@@ -182,9 +175,7 @@ class DocumentController extends Controller
     )]
     public function destroy(Document $document): JsonResponse
     {
-        //$user = Auth::user();
-        $user = User::find(1);
-
+        $user = Auth::user();
         if ($user->isAdmin()) {
             $document->delete();
             return response()->json(status: 204);

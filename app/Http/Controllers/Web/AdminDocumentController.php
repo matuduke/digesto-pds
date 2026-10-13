@@ -6,12 +6,14 @@ use App\Data\CreateDocumentData;
 use App\Data\DocumentSortData;
 use App\Data\GetDocumentsData;
 use App\Http\Controllers\Controller;
+use App\Models\ChangeLog;
 use App\Models\Document;
 use App\Models\DocumentType;
 use App\Models\File;
 use App\Models\Group;
 use App\Models\User;
 use App\Services\DocumentService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
@@ -30,21 +32,27 @@ class AdminDocumentController extends Controller
         $user = Auth::user();
         $documents = $this->documentService->list($data, $sortData, $user);
         $documentTypes = DocumentType::query()
-            ->orderBy(DocumentType::DESCRIPTION)
+            ->orderBy(DocumentType::DESCRIPTION, 'asc')
             ->pluck(DocumentType::DESCRIPTION, DocumentType::ID);
+        $defaultDocumentType = DocumentType::where('name', 'like', '%extern%')->first()->name;
         $statuses = [
             'borrador' => 'Borrador',
             'publicado' => 'Publicado',
         ];
 
         return view('admin.documents.index', [
+            'user' => $user,
             'documents' => $documents,
             'documentTypes' => $documentTypes,
             'statuses' => $statuses,
+            'defaultDocumentType' => $defaultDocumentType,
             'filters' => [
                 'keyword' => $request['keyword'],
+                'number' => $request['number'],
                 'document_type_id' => $data->documentTypeId,
                 'status' => $request['status'],
+                'date_from' => $request['date_from'],
+                'date_to' => $request['date_to'],
                 'sort' => $sortData->sort,
             ],
         ]);
@@ -62,59 +70,137 @@ class AdminDocumentController extends Controller
         $user = Auth::user();
         try {
             $document = $this->documentService->get($document->id, $user);
+            $defaultDocumentType = DocumentType::where('name', 'like', '%extern%')->first()->name;
         } catch (AccessDeniedHttpException $exception) {
             abort(403, $exception->getMessage());
         }
 
         return view('admin.documents.show', [
             'document' => $document,
+            'defaultDocumentType' => $defaultDocumentType,
+            'user' => $user,
         ]);
     }
 
-    public function update(CreateDocumentData $data, Request $request): View
+    public function update(CreateDocumentData $data, Request $request): RedirectResponse
     {
         $user = Auth::user();
-        try {
-            if ($data->id) {
-                $document = $this->documentService->get($data->id, $user);
-            } else {
-                $document = new Document;
-                $document->user_id = $user->id;
-            }
-            $document->fill($data->toArray());
-            $document->save();
-
-            // Sync authorized users
-            $authorizedUserIds = array_filter(
-                array_map('trim', explode(',', $request->input('authorized_user_ids', ''))),
-                fn ($id) => is_numeric($id)
-            );
-            $document->authorizedUsers()->sync($authorizedUserIds);
-
-            // Sync authorized groups
-            $authorizedGroupIds = array_filter(
-                array_map('trim', explode(',', $request->input('authorized_group_ids', ''))),
-                fn ($id) => is_numeric($id)
-            );
-            $document->authorizedGroups()->sync($authorizedGroupIds);
-
-            // Process removed files (from hidden input field)
-            $removedFiles = $request->input('removed-files', '');
-            if ($removedFiles) {
-                $this->deleteRemovedFiles($document, $removedFiles);
-            }
-
-            // Process attached files
-            if ($data->files && is_array($data->files)) {
-                foreach ($data->files as $file) {
-                    $this->saveAttachedFile($document, $file);
+        // Check user's permission
+        if ($user->isCreator()) {
+            try {
+                if ($data->id) {
+                    $document = $this->documentService->get($data->id, $user);
+                } else {
+                    $document = new Document;
+                    $document->user_id = $user->id;
                 }
+
+                $isPublicChanged = false;
+                if ($document->is_public != $data->isPublic) {
+                    $isPublicChanged = true;
+                }
+                $document->fill($data->toArray());
+                $changes = $document->getDirty();
+
+                if (!$isPublicChanged) {
+                    unset($changes['is_public']);
+                }
+                if (count($changes) > 0) {
+                    if ($document->exists) {
+                        $this->createLog($document, $user, json_encode($changes), 'document-updated');
+                    } else {
+                        $this->createLog($document, $user, 'La norma fue creada');
+                    }
+
+                }
+                $document->save();
+
+                // Remove html tags from external documents
+                $defaultDocumentType = DocumentType::where('name', 'like', '%extern%')->first()->name;
+                if ($document->documentType->name == $defaultDocumentType) {
+                    $document->content = strip_tags($document->content, '<br>');
+                    $document->content = str_replace('<br>', "<br>\n", $document->content);
+                    $document->save();
+                }
+
+                // Sync authorized users
+                $authorizedUserIds = array_filter(
+                    array_map('trim', explode(',', $request->input('authorized_user_ids', ''))),
+                    fn ($id) => is_numeric($id)
+                );
+                $syncedUsers = $document->authorizedUsers()->sync($authorizedUserIds);
+                if (count($syncedUsers['attached']) > 0 || count($syncedUsers['detached']) > 0) {
+                    $syncedUsers['detached'] = array_values($syncedUsers['detached']);
+                    $this->createLog($document, $user, json_encode($syncedUsers), 'users-synched');
+                }
+
+                // Sync authorized groups
+                $authorizedGroupIds = array_filter(
+                    array_map('trim', explode(',', $request->input('authorized_group_ids', ''))),
+                    fn ($id) => is_numeric($id)
+                );
+                $syncedGroups = $document->authorizedGroups()->sync($authorizedGroupIds);
+                if (count($syncedGroups['attached']) > 0 || count($syncedGroups['detached']) > 0) {
+                    $syncedGroups['detached'] = array_values($syncedGroups['detached']);
+                    $this->createLog($document, $user, json_encode($syncedGroups), 'groups-synched');
+                }
+
+                // Process removed files (from hidden input field)
+                $removedFiles = $request->input('removed-files', '');
+                if ($removedFiles) {
+                    $this->deleteRemovedFiles($document, $removedFiles);
+                }
+
+                // Process attached files
+                if ($data->files && is_array($data->files)) {
+                    foreach ($data->files as $file) {
+                        $this->saveAttachedFile($document, $file);
+                    }
+                }
+            } catch (AccessDeniedHttpException $exception) {
+                abort(403, $exception->getMessage());
             }
-        } catch (AccessDeniedHttpException $exception) {
-            abort(403, $exception->getMessage());
+        } else {
+            abort(403, 'Usted no pertenece al grupo de creadores de normativas');
         }
 
-        return $this->editOrNew($document, 'Los datos de la normativa se actualizaron correctamente.');
+        return redirect()
+            ->route('admin.documents.edit', ['document' => $document->id])
+            ->with('message', 'Los datos de la normativa se actualizaron correctamente.');
+    }
+
+    public function setAsDraft(Document $document)
+    {
+        $user = Auth::user();
+
+        // Check user's permission
+        if ($user->isApprover()) {
+            $document->status = 'borrador';
+            $document->save();
+            $this->createLog($document, $user, 'La normativa se cambió a estado borrador');
+            return redirect()
+            ->route('admin.documents.edit', ['document' => $document->id])
+            ->with('message', 'La normativa se cambió a estado borrador.');
+        } else {
+            abort(403, 'Usted no pertenece al grupo de aprobadores de normativas');
+        }
+    }
+
+    public function publish(Document $document)
+    {
+        $user = Auth::user();
+
+        // Check user's permission
+        if ($user->isApprover()) {
+            $document->status = 'publicado';
+            $document->save();
+            $this->createLog($document, $user, 'La normativa se cambió a estado publicada');
+            return redirect()
+            ->route('admin.documents.edit', ['document' => $document->id])
+            ->with('message', 'La normativa se cambió a estado publicada.');
+        } else {
+            abort(403, 'Usted no pertenece al grupo de aprobadores de normativas');
+        }
     }
 
     public function edit(Document $document): View
@@ -131,6 +217,8 @@ class AdminDocumentController extends Controller
 
     private function editOrNew(Document $document, ?string $message = null): View
     {
+        $user = Auth::user();
+
         $documentTypes = DocumentType::query()
             ->orderBy(DocumentType::NAME)
             ->pluck('description', 'id');
@@ -154,6 +242,7 @@ class AdminDocumentController extends Controller
         $authorizedGroupIds = $document->authorizedGroups->pluck('id')->implode(',');
 
         return view('admin.documents.form', [
+            'user' => $user,
             'document' => $document,
             'documentTypes' => $documentTypes,
             'statuses' => $statuses,
@@ -164,6 +253,11 @@ class AdminDocumentController extends Controller
             'authorizedUserIds' => $authorizedUserIds,
             'authorizedGroupIds' => $authorizedGroupIds,
         ]);
+    }
+
+    public function destroy(Document $document)
+    {
+        return $document->delete();
     }
 
     /**
@@ -194,6 +288,9 @@ class AdminDocumentController extends Controller
             'mime_type' => $mimeType,
             'size' => $size,
         ]);
+
+        $user = Auth::user();
+        $this->createLog($document, $user, 'Se adjuntó el archivo: ' . $originalName);
     }
 
     /**
@@ -223,6 +320,9 @@ class AdminDocumentController extends Controller
                 ->where('document_id', $document->id)
                 ->first();
 
+            $user = Auth::user();
+            $this->createLog($document, $user, 'Se eliminó el archivo: ' . $file->name);
+
             if ($file) {
                 // Delete from filesystem
                 if (Storage::disk('local')->exists($file->path)) {
@@ -233,6 +333,16 @@ class AdminDocumentController extends Controller
                 $file->delete();
             }
         }
+    }
+
+    private function createLog(Document $document, User $user, string $changes, string $type = '')
+    {
+        ChangeLog::create([
+            'document_id' => $document->id,
+            'user_id' => $user->id,
+            'document_changes' => $changes,
+            'type' => $type,
+        ]);
     }
 
     /**

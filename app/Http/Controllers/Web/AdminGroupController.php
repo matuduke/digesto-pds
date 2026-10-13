@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\Group;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -45,8 +46,15 @@ class AdminGroupController extends Controller
             : new Group;
 
         $group->fill($validated);
-        $group->name = $this->normalizeName($group->description);
+        if (!in_array($group->name, [
+            Group::ADMINISTRATORS_GROUP,
+            Group::DOCUMENT_CREATORS_GROUP,
+            Group::DOCUMENT_APPROVERS_GROUP,
+        ])) {
+            $group->name = $this->normalizeName($group->description);
+        }
         $group->save();
+
 
         // Sync group members
         $memberIds = array_filter(
@@ -58,8 +66,16 @@ class AdminGroupController extends Controller
         return redirect()->route('admin.groups.index');
     }
 
-    public function destroy(Group $group): RedirectResponse
+    public function destroy(Group $group): RedirectResponse|JsonResponse
     {
+        if (in_array($group->name, [
+            Group::ADMINISTRATORS_GROUP,
+            Group::DOCUMENT_CREATORS_GROUP,
+            Group::DOCUMENT_APPROVERS_GROUP,
+        ])) {
+            return redirect()->route('admin.groups.index')->withErrors(['msg' => 'No se puede eliminar el grupo <b>' . $group->description . '</b>']);;
+        }
+
         $group->delete();
 
         return redirect()->route('admin.groups.index');
